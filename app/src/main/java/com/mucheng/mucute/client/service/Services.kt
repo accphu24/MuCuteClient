@@ -28,10 +28,51 @@ import com.mucheng.mucute.relay.listener.OfflineLoginPacketListener
 import com.mucheng.mucute.relay.listener.OnlineLoginPacketListener
 import com.mucheng.mucute.relay.util.captureGamePacket
 import java.io.File
+import java.io.OutputStream
+import java.io.PrintStream
 import kotlin.concurrent.thread
 
 @Suppress("MemberVisibilityCanBePrivate")
 object Services {
+
+    init {
+        // Chuyển hướng System.out/System.err (println() bên trong MuCuteRelay.jar)
+        // sang Log.d, vì trên 1 số ROM println() không tự động hiện trong logcat.
+        redirectStdToLogcat()
+    }
+
+    private fun redirectStdToLogcat() {
+        val outStream = object : OutputStream() {
+            private val buffer = StringBuilder()
+            override fun write(b: Int) {
+                val c = b.toChar()
+                if (c == '\n') {
+                    if (buffer.isNotEmpty()) {
+                        Log.d("MuCuteRelayStdout", buffer.toString())
+                        buffer.clear()
+                    }
+                } else {
+                    buffer.append(c)
+                }
+            }
+        }
+        val errStream = object : OutputStream() {
+            private val buffer = StringBuilder()
+            override fun write(b: Int) {
+                val c = b.toChar()
+                if (c == '\n') {
+                    if (buffer.isNotEmpty()) {
+                        Log.e("MuCuteRelayStderr", buffer.toString())
+                        buffer.clear()
+                    }
+                } else {
+                    buffer.append(c)
+                }
+            }
+        }
+        System.setOut(PrintStream(outStream, true))
+        System.setErr(PrintStream(errStream, true))
+    }
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -97,6 +138,8 @@ object Services {
                 ) {
                     initModules(this)
 
+                    // TẠM TẮT patchCodec để test xem có phải nguyên nhân lỗi
+                    // "server sent broken packet" trên protocol v766 hay không.
                     listeners.add(AutoCodecPacketListener(this, patchCodec = false))
                     listeners.add(
                         if (selectedAccount == null) OfflineLoginPacketListener(this) else OnlineLoginPacketListener(
