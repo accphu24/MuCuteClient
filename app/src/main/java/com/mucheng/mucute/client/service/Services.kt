@@ -97,7 +97,7 @@ object Services {
                 ) {
                     initModules(this)
 
-                    listeners.add(AutoCodecPacketListener(this))
+                    listeners.add(AutoCodecPacketListener(this, patchCodec = false))
                     listeners.add(
                         if (selectedAccount == null) OfflineLoginPacketListener(this) else OnlineLoginPacketListener(
                             this,
